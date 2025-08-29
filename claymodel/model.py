@@ -87,6 +87,9 @@ class Encoder(nn.Module):
         patches = patches + pos_metadata_encoding  # [B L D] + [B L D] -> [B L D]
         return patches  # [B L D]
 
+
+
+
     def mask_out(self, patches):
         """
         Mask out patches randomly by shuffling the patches & masking out the

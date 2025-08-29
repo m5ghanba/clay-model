@@ -1,0 +1,85 @@
+# lightning.pytorch==2.1.2
+seed_everything: 42
+data:
+  data_root: "C:/Annotated Dataset/L2A Data/Tiles10and20mbandsSubsBathy_G0Percent_stride256"  # Update this path
+  test_folders: ["20230816T191911_20230816T192348_T10UCA"]  # Specify which folder(s) to hold out for testing. A list of folder names from the directory data_root.
+  batch_size: 4  # Reduced from 16 due to 512x512 images
+  num_workers: 8
+  target_size: 512
+  train_val_split: 0.8
+  random_seed: 42
+  normalization_params:
+    # insert mean and std values based on the bands you have selected. The order of the bands in my dataset: B2,B3,B4,B8,B5,B6,B7,B8A,B11,B12,Substrate,Bathymetry all resampled to 10m res
+    # The mean and std lists should match the bands you have selected in kelp_datamodule and the waves parameter you have set in kelp_model
+    mean: [ 1.92710564e+02, 2.45262772e+02, 1.32882966e+02, 9.15828301e+02, 2.98188553e+02, 7.29549684e+02, 8.66625439e+02, 9.50272472e+02, 4.12831461e+02, 2.09127963e+02]   
+    std: [1.51370010e+02, 2.08243277e+02, 1.94224862e+02, 1.24217269e+03, 3.68341824e+02, 9.61556767e+02, 1.15465961e+03, 1.27758675e+03, 5.83198874e+02, 3.32916919e+02]   
+
+
+
+ 
+model:
+  num_classes: 1
+  ckpt_path: "checkpoints/clay-v1.5.ckpt"  # Update path to your Clay checkpoint
+  lr: 1e-5  # Same as original
+  wd: 0.05
+  b1: 0.9
+  b2: 0.95
+  threshold: 0.5  # Sigmoid threshold for binary classification
+
+trainer:
+  accelerator: auto
+  strategy: auto
+  devices: auto
+  num_nodes: 1
+  precision: bf16-mixed
+  log_every_n_steps: 5
+  max_epochs: 100
+  accumulate_grad_batches: 1
+  default_root_dir: checkpoints/kelp_segment
+  fast_dev_run: False
+  num_sanity_val_steps: 0
+  logger:
+    - class_path: lightning.pytorch.loggers.WandbLogger
+      init_args:
+        entity: your_wandb_entity  # Update with your W&B entity
+        project: kelp-segment
+        group: kelp-binary-classification
+        log_model: false
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        dirpath: checkpoints/kelp_segment
+        auto_insert_metric_name: False
+        filename: kelp-binary-segment_epoch-{epoch:02d}_val-iou-{val/iou:.4f}
+        monitor: val/iou
+        mode: max
+        save_last: True
+        save_top_k: 2
+        save_weights_only: True
+        verbose: True
+    - class_path: lightning.pytorch.callbacks.LearningRateMonitor
+      init_args:
+        logging_interval: step
+  plugins:
+    - class_path: lightning.pytorch.plugins.io.AsyncCheckpointIO
+
+# Optional: Callbacks
+# callbacks:
+#   - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+#     init_args:
+#       monitor: val_loss
+#       mode: min
+#       save_top_k: 3
+#       filename: "kelp-{epoch:02d}-{val_loss:.2f}"
+#   - class_path: lightning.pytorch.callbacks.EarlyStopping
+#     init_args:
+#       monitor: val_loss
+#       mode: min
+#       patience: 10
+
+# Optional: Logger configuration
+# logger:
+#   class_path: lightning.pytorch.loggers.WandbLogger
+#   init_args:
+#     project: kelp-segmentation
+#     name: kelp-clay-experiment
