@@ -31,7 +31,7 @@ class KelpDataset(Dataset):
         self, 
         data_paths: List[Tuple[str, str]], 
         normalization_params: Dict,
-        target_size: int = 512,
+        target_size: int = 224,
         augment: bool = True,
     ):
         self.data_paths = data_paths
@@ -121,8 +121,8 @@ class KelpDataset(Dataset):
         image = self.normalization_transform(image)
         
         sample = {
-            "pixels": image,  # (C, 512, 512)
-            "label": mask,    # (512, 512)
+            "pixels": image,  # (C, H, W)
+            "label": mask,    # (H, W)
             "time": torch.zeros(4),    # Placeholder for time information
             "latlon": torch.zeros(4),  # Placeholder for latlon information  
         }
@@ -145,7 +145,7 @@ class KelpDataModule(L.LightningDataModule):
         test_folders: List[str],  # Required: which folders to hold out for testing
         batch_size: int = 4,
         num_workers: int = 4,
-        target_size: int = 512,
+        target_size: int = 224,
         train_val_split: float = 0.8,
         random_seed: int = 42,
     ):
@@ -259,46 +259,102 @@ class KelpDataModule(L.LightningDataModule):
         """
         MODIFIED: Setup datasets using data-level train/val split.
         """
-        if stage in {"fit", None}:
-            # Get all available folders except the test folder
+        # Modfd Here: Check if test_folders is empty, if so do 70-15-15 random split
+        if len(self.test_folders) == 0:
+            print("Since no test folder was used, splitting the data randomly into train/val/test (70-15-15)")
+            
+            # Get all available folders
             all_folders = [f.name for f in self.data_root.iterdir() if f.is_dir()]
             all_folders.sort()  # For reproducibility
             
-            # Remove the test folders from the list
-            train_val_folders = [f for f in all_folders if f not in self.test_folders]
+            # Collect ALL data from all folders
+            all_data = self.collect_data_paths(all_folders)
             
-            print(f"Non-test folders used for train/val: {train_val_folders}")
+            # Shuffle all data paths with fixed seed for reproducibility
+            shuffled_paths = all_data.copy()
+            random.shuffle(shuffled_paths)
             
-            # Collect ALL data from the non-test folders
-            all_train_val_data = self.collect_data_paths(train_val_folders)
+            # Split into train/val/test (70-15-15)
+            n_total = len(shuffled_paths)
+            n_train = int(n_total * 0.7)
+            n_val = int(n_total * 0.15)
             
-            # Split at DATA level, not folder level
-            self.train_paths, self.val_paths = self.create_train_val_split_from_data(all_train_val_data)
+            self.train_paths = shuffled_paths[:n_train]
+            self.val_paths = shuffled_paths[n_train:n_train + n_val]
+            self.test_paths = shuffled_paths[n_train + n_val:]
             
-            # Create datasets
-            self.trn_ds = KelpDataset(
-                self.train_paths,
-                self.normalization_params,
-                target_size=self.target_size,
-                augment=True,  # Augmentation for training
-            )
+            print(f"Random 3-way split:")
+            print(f"  Total samples: {n_total}")
+            print(f"  Train samples: {len(self.train_paths)} ({len(self.train_paths)/n_total*100:.1f}%)")
+            print(f"  Val samples: {len(self.val_paths)} ({len(self.val_paths)/n_total*100:.1f}%)")
+            print(f"  Test samples: {len(self.test_paths)} ({len(self.test_paths)/n_total*100:.1f}%)")
             
-            self.val_ds = KelpDataset(
-                self.val_paths,
-                self.normalization_params,
-                target_size=self.target_size,
-                augment=False,  # No augmentation for validation
-            )
+            # Create all datasets
+            if stage in {"fit", None}:
+                self.trn_ds = KelpDataset(
+                    self.train_paths,
+                    self.normalization_params,
+                    target_size=self.target_size,
+                    augment=True,  # Augmentation for training
+                )
+                
+                self.val_ds = KelpDataset(
+                    self.val_paths,
+                    self.normalization_params,
+                    target_size=self.target_size,
+                    augment=False,  # No augmentation for validation
+                )
             
-        if stage in {"test", None}:
-            # Test on the held-out folder
-            self.test_paths = self.collect_data_paths([self.test_folders])
-            self.test_ds = KelpDataset(
-                self.test_paths,
-                self.normalization_params,
-                target_size=self.target_size,
-                augment=False,  # No augmentation for testing
-            )
+            if stage in {"test", None}:
+                self.test_ds = KelpDataset(
+                    self.test_paths,
+                    self.normalization_params,
+                    target_size=self.target_size,
+                    augment=False,  # No augmentation for testing
+                )
+        else:
+            # Original behavior when test_folders is not empty
+            if stage in {"fit", None}:
+                # Get all available folders except the test folder
+                all_folders = [f.name for f in self.data_root.iterdir() if f.is_dir()]
+                all_folders.sort()  # For reproducibility
+                
+                # Remove the test folders from the list
+                train_val_folders = [f for f in all_folders if f not in self.test_folders]
+                
+                print(f"Non-test folders used for train/val: {train_val_folders}")
+                
+                # Collect ALL data from the non-test folders
+                all_train_val_data = self.collect_data_paths(train_val_folders)
+                
+                # Split at DATA level, not folder level
+                self.train_paths, self.val_paths = self.create_train_val_split_from_data(all_train_val_data)
+                
+                # Create datasets
+                self.trn_ds = KelpDataset(
+                    self.train_paths,
+                    self.normalization_params,
+                    target_size=self.target_size,
+                    augment=True,  # Augmentation for training
+                )
+                
+                self.val_ds = KelpDataset(
+                    self.val_paths,
+                    self.normalization_params,
+                    target_size=self.target_size,
+                    augment=False,  # No augmentation for validation
+                )
+                
+            if stage in {"test", None}:
+                # Test on the held-out folder
+                # Modfd Here: Fixed bug - pass test_folders directly instead of wrapping in list
+                self.test_paths = self.collect_data_paths(self.test_folders)
+                self.test_ds = KelpDataset(
+                    self.test_paths,
+                    self.normalization_params,
+                    target_size=self.target_size,
+                    augment=False,  # No augmentation for testing
+                )
 
     def train_dataloader(self):
         """Create DataLoader for training data."""

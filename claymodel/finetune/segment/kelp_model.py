@@ -8,7 +8,7 @@ import segmentation_models_pytorch as smp
 import torch
 import torch.nn.functional as F
 from torch import optim
-from torchmetrics.classification import F1Score, BinaryJaccardIndex
+from torchmetrics.classification import F1Score, BinaryJaccardIndex, BinaryPrecision, BinaryRecall
 
 from claymodel.finetune.segment.factory import Segmentor
 
@@ -46,8 +46,9 @@ class KelpSegmentor(L.LightningModule):
 
         # Use BCE with logits loss for binary segmentation
         # self.loss_fn = torch.nn.BCEWithLogitsLoss() 
-        self.loss_fn = smp.losses.DiceLoss(mode="binary", from_logits=True) #smp.losses.DiceLoss(mode="binary") by default expects probabilities (values between 0 and 1)
+        # self.loss_fn = smp.losses.DiceLoss(mode="binary", from_logits=True) #smp.losses.DiceLoss(mode="binary") by default expects probabilities (values between 0 and 1)
                                                                                 # The Dice loss formula requires probability values to compute the intersection and union correctly
+        self.loss_fn = smp.losses.LovaszLoss(mode="binary")
         
         # Binary metrics
         self.iou = BinaryJaccardIndex(threshold=threshold) # This will compute IoU across the entire dataset rather than averaging per-image IoUs.
@@ -55,6 +56,8 @@ class KelpSegmentor(L.LightningModule):
             task="binary",
             threshold=threshold,
         )
+        self.precision = BinaryPrecision(threshold=threshold)
+        self.recall = BinaryRecall(threshold=threshold)
         
         self.threshold = threshold
 
@@ -72,7 +75,7 @@ class KelpSegmentor(L.LightningModule):
         # Create Sentinel-2 wavelengths (in micrometers) based on the bands used. Look at kelp_datamodule file: load_module method from KelpDataset class
         # Based on your band structure: B2,B3,B4,B8,B5,B6,B7,B8A,B11,B12, here are the wavelength values derived from metadata
         # B2 or Blue: 0.493, B3 or green: 0.56, B4 or red: 0.665, B8 or nir: 0.842  B5 or rededge1: 0.704, B6 or rededge2: 0.74, B7 or rededge3: 0.783, B8A or nir08: 0.865, B11 or swir16: 1.61, B12 or swir22: 2.19
-        waves = torch.tensor([0.493, 0.56, 0.665, 0.842, 0.704, 0.74, 0.783, 0.865, 1.61, 2.19]) 
+        waves = torch.tensor([0.493, 0.56, 0.665, 0.842, 0.704, 0.74, 0.783, 0.865, 1.61, 2.19]) # , 0.74, 0.783, 0.865, 1.61, 2.19]) 
         gsd = torch.tensor(10.0)  # Sentinel-2 10m GSD for these bands
 
         
@@ -135,7 +138,7 @@ class KelpSegmentor(L.LightningModule):
         labels = batch["label"].float()  # Convert to float for loss
         outputs = self(batch)  # Shape: (batch_size, 1, H, W)
         
-        # Resize outputs to match label size (512x512 to match your target_size)
+        # Resize outputs to match label size 
         if outputs.shape[-2:] != labels.shape[-2:]:
             outputs = F.interpolate(
                 outputs,
@@ -157,6 +160,8 @@ class KelpSegmentor(L.LightningModule):
         # Calculate metrics
         iou = self.iou(predictions, labels.int())
         f1 = self.f1(predictions, labels.int())
+        precision = self.precision(predictions, labels.int())
+        recall = self.recall(predictions, labels.int())
 
         # Log metrics
         self.log(
@@ -180,6 +185,24 @@ class KelpSegmentor(L.LightningModule):
         self.log(
             f"{phase}/f1",
             f1,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
+        )
+        self.log(
+            f"{phase}/precision",
+            precision,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
+        )
+        self.log(
+            f"{phase}/recall",
+            recall,
             on_step=True,
             on_epoch=True,
             prog_bar=True,
@@ -213,6 +236,38 @@ class KelpSegmentor(L.LightningModule):
             torch.Tensor: The loss value.
         """
         return self.shared_step(batch, batch_idx, "val")
+
+    def test_step(self, batch, batch_idx):
+        """
+        Test step for the model.
+        Args:
+            batch (dict): A dictionary containing the batch data.
+            batch_idx (int): The index of the batch.
+
+        Returns:
+            torch.Tensor: The loss value.
+        """
+        # Just reuse your existing shared_step method
+        return self.shared_step(batch, batch_idx, "test")
+        
+    def on_test_epoch_end(self):
+        """Log epoch-level test metrics."""
+        test_iou = self.iou.compute()
+        test_f1 = self.f1.compute()
+        test_precision = self.precision.compute()
+        test_recall = self.recall.compute()
+        
+        print(f"\n=== TEST SET RESULTS ===")
+        print(f"Test IoU: {test_iou:.4f}")
+        print(f"Test F1: {test_f1:.4f}")
+        print(f"Test Precision: {test_precision:.4f}")
+        print(f"Test Recall: {test_recall:.4f}")
+        
+        # Reset metrics
+        self.iou.reset()
+        self.f1.reset()
+        self.precision.reset()
+        self.recall.reset()
 
     def predict_step(self, batch, batch_idx):
         """

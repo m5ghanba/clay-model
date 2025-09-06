@@ -47,7 +47,7 @@ class SegmentEncoder(Encoder):
         mlp_ratio,
         ckpt_path=None,
         pretrained_size=224,
-        current_size=512,
+        current_size=224,
     ):
         super().__init__(
             mask_ratio,
@@ -222,10 +222,10 @@ class Segmentor(nn.Module):
     Attributes:
         num_classes (int): Number of output classes for segmentation.
         ckpt_path (str): Path to the checkpoint file.
-        input_size (int): Input image size (default: 512).
+        input_size (int): Input image size.
     """
 
-    def __init__(self, num_classes, ckpt_path, input_size=512):
+    def __init__(self, num_classes, ckpt_path, input_size=224):
         super().__init__()
         
         self.input_size = input_size

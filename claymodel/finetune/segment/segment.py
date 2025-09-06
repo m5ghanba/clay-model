@@ -20,7 +20,7 @@ def cli_main():
     """
     cli = LightningCLI(
         KelpSegmentor,     # Custom Kelp binary segmentation model
-        KelpDataModule,    # Custom Kelp data module with leave-one-folder-out
+        KelpDataModule,    # Custom Kelp data module 
         save_config_kwargs={"overwrite": True},
     )
     return cli

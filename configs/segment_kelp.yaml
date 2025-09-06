@@ -1,22 +1,24 @@
 # lightning.pytorch==2.1.2
 seed_everything: 42
 data:
-  data_root: "C:/Annotated Dataset/L2A Data/Tiles10and20mbandsSubsBathy_G0Percent_stride256"  # Update this path
-  test_folders: ["20230816T191911_20230816T192348_T10UCA"]  # Specify which folder(s) to hold out for testing. A list of folder names from the directory data_root.
-  batch_size: 4  # Reduced from 16 due to 512x512 images
+  data_root: "C:/Annotated Dataset/L2A Data/224Tiles_stride112_ClayModel_10and20mbandsSubsBathy_G0Percent" # Update this path
+  test_folders: []  # Specify which folder(s) to hold out for testing. A list of folder names from the directory data_root. If this list is empty, it will do 70-15-15 random split. See kelp_datamodule
+  batch_size: 16  # Reduced from 16 to 4 due to 512x512 images
   num_workers: 8
-  target_size: 512
-  train_val_split: 0.8
+  target_size: 224
+  train_val_split: 0.8 # this will not matter if test_folders is an empty list
   random_seed: 42
   normalization_params:
     # insert mean and std values based on the bands you have selected. The order of the bands in my dataset: B2,B3,B4,B8,B5,B6,B7,B8A,B11,B12,Substrate,Bathymetry all resampled to 10m res
     # The mean and std lists should match the bands you have selected in kelp_datamodule and the waves parameter you have set in kelp_model
-    mean: [ 1.92710564e+02, 2.45262772e+02, 1.32882966e+02, 9.15828301e+02, 2.98188553e+02, 7.29549684e+02, 8.66625439e+02, 9.50272472e+02, 4.12831461e+02, 2.09127963e+02]   
-    std: [1.51370010e+02, 2.08243277e+02, 1.94224862e+02, 1.24217269e+03, 3.68341824e+02, 9.61556767e+02, 1.15465961e+03, 1.27758675e+03, 5.83198874e+02, 3.32916919e+02]   
+    # mean: [ 1.92710564e+02, 2.45262772e+02, 1.32882966e+02, 9.15828301e+02, 2.98188553e+02] # , 7.29549684e+02, 8.66625439e+02, 9.50272472e+02, 4.12831461e+02, 2.09127963e+02]   # for loo UCA
+    # std: [1.51370010e+02, 2.08243277e+02, 1.94224862e+02, 1.24217269e+03, 3.68341824e+02] # , 9.61556767e+02, 1.15465961e+03, 1.27758675e+03, 5.83198874e+02, 3.32916919e+02]   
+    # mean: [200.56365966796875, 249.37550354003906, 140.45111083984375, 867.0869140625, 293.9607238769531] # 3fold 0,2,6
+    # std: [157.73484802246094, 211.28646850585938, 204.896484375, 1227.8448486328125, 367.1849670410156]
+    mean: [200.85772705078125, 250.04220581054688, 140.90208435058594, 873.17236328125, 295.90692138671875, 701.5117797851562, 832.185546875, 908.3177490234375, 402.9516906738281, 210.0332794189453] # 701.5117797851562, 832.185546875, 908.3177490234375, 402.9516906738281, 210.0332794189453   #   all dataset
+    std: [161.0935821533203, 214.2581787109375, 206.62655639648438, 1227.9498291015625, 368.43585205078125, 953.573486328125, 1147.3150634765625, 1267.2421875, 594.2291259765625, 348.8812561035156] # 953.573486328125, 1147.3150634765625, 1267.2421875, 594.2291259765625, 348.8812561035156
 
 
-
- 
 model:
   num_classes: 1
   ckpt_path: "checkpoints/clay-v1.5.ckpt"  # Update path to your Clay checkpoint
