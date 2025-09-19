@@ -24,7 +24,7 @@ The model requires Sentinel-2 imagery and corresponding binary masks for kelp se
 
 Organize your dataset as follows:
 
-<pre> ``` 
+<pre>  
 data/
 ├── train/ 
 │ ├── images/ # Sentinel-2 images (.tif) 
@@ -35,7 +35,7 @@ data/
 ├── test_folder2/ # Test set 2 
 │ ├── images/ 
 │ └── masks/ 
-... ``` </pre>
+...  </pre>
 
 ### Compute Mean and Std
 
