@@ -62,7 +62,7 @@ python claymodel/finetune/segment/segment.py fit --config configs/segment_kelp.y
 Run kelp_inference.ipynb after making sure about the directories are set correctly in the notebook, e.g.,  the directory to the ckpt file.
 
 ### Running Inference on A Sentinel-2 Image
-Run kelp_inference_S2fullscen.ipynb after you set the directory of the folder(s) (each) containing two files: B2B3B4B8.tif and B5B6B7B8aB11B12.tif.
+Run kelp_inference_S2fullscen.ipynb after you set the directory of the folder(s) (each) containing two files: B2B3B4B8.tif and B5B6B7B8A_B11B12.tif.
 
 
 ## Acknowledgments
