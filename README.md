@@ -23,7 +23,9 @@ The model requires Sentinel-2 imagery and corresponding binary masks for kelp se
 ### Dataset Structure
 
 Organize your dataset as follows:
+
 <pre> ``` data/ ├── train/ │ ├── images/ # Sentinel-2 images (.tif) │ └── masks/ # Binary masks (.tif, 1=kelp, 0=background) ├── test_folder1/ # Test set 1 │ ├── images/ │ └── masks/ ├── test_folder2/ # Test set 2 │ ├── images/ │ └── masks/ ... ``` </pre>
+
 ### Compute Mean and Std
 
 Run the `calculate_mean_std.ipynb` notebook to compute mean and standard deviation for Sentinel-2 bands across the training dataset.
