@@ -26,13 +26,13 @@ Organize your dataset as follows:
 
 <pre>  
 data/
-├── train/ 
-│ ├── images/ # Sentinel-2 images (.tif) 
+├── folder1/ 
+│ ├── images/ # Sentinel-2 image chips (.tif) 
 │ └── masks/ # Binary masks (.tif, 1=kelp, 0=background) 
-├── test_folder1/ # Test set 1 
+├── folder2/  
 │ ├── images/ 
 │ └── masks/ 
-├── test_folder2/ # Test set 2 
+├── folder3/ 
 │ ├── images/ 
 │ └── masks/ 
 ...  </pre>
