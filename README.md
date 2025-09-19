@@ -3,11 +3,6 @@
 
 This repository is a fork of the [Clay Foundation Model](https://github.com/Clay-foundation/model), modified to perform semantic segmentation of kelp using Sentinel-2 satellite imagery. The project adapts the Clay model to map kelp in coastal regions, leveraging a custom dataset with Sentinel-2 bands and a tailored configuration for training and inference.
 
-### License
-
-- **Code and Model Weights**: Licensed under the [Apache License](LICENSE).
-- **Documentation**: Licensed under the [CC-BY-4.0 License](https://creativecommons.org/licenses/by/4.0/).
-
 ### Project Overview
 
 This project extends the Clay Foundation Model for binary segmentation of kelp (kelp vs. background) using Sentinel-2 imagery. Key modifications include:
@@ -28,7 +23,7 @@ The model requires Sentinel-2 imagery and corresponding binary masks for kelp se
 ### Dataset Structure
 
 Organize your dataset as follows:
-```text data/ ├── train/ │ ├── images/ # Sentinel-2 images (.tif) │ └── masks/ # Binary masks (.tif, 1=kelp, 0=background) ├── test_folder1/ # Test set 1 │ ├── images/ │ └── masks/ ├── test_folder2/ # Test set 2 │ ├── images/ │ └── masks/ ... ```
+<pre> ``` data/ ├── train/ │ ├── images/ # Sentinel-2 images (.tif) │ └── masks/ # Binary masks (.tif, 1=kelp, 0=background) ├── test_folder1/ # Test set 1 │ ├── images/ │ └── masks/ ├── test_folder2/ # Test set 2 │ ├── images/ │ └── masks/ ... ``` </pre>
 ### Compute Mean and Std
 
 Run the `calculate_mean_std.ipynb` notebook to compute mean and standard deviation for Sentinel-2 bands across the training dataset.
